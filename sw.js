@@ -1,6 +1,6 @@
 // faithBOT app: keeps the app itself (code, styles, fonts, pictures) on the phone, so it opens at once and works offline.
 // The data is kept by the app (localStorage); this file only serves the app's own files.
-const V = 'fb-v49';
+const V = 'fb-v50';
 const MEDIA = 'fb-media-1'; // v43: pictures, posters, covers, fonts and emoji are kept across app updates (they never change)
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(V).then(c => c.addAll(['./', './index.html']).catch(() => {}))); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== MEDIA).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
