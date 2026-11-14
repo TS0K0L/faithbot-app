@@ -1,0 +1,22 @@
+// faithBOT app: keeps the app itself (code, styles, fonts, pictures) on the phone, so it opens at once and works offline.
+// The data is kept by the app (localStorage); this file only serves the app's own files.
+const V = 'fb-v52';
+const MEDIA = 'fb-media-1'; // v43: pictures, posters, covers, fonts and emoji are kept across app updates (they never change)
+self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(V).then(c => c.addAll(['./', './index.html']).catch(() => {}))); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== MEDIA).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+const PIC_HOSTS = /(^|\.)(ytimg\.com|rtbcdn\.ru|rutube\.ru)$/;
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  const own = url.origin === location.origin;
+  const pic = PIC_HOSTS.test(url.hostname) && (url.hostname !== 'rutube.ru' || /\/thumbnail\//.test(url.pathname));
+  if (!own && !pic) return; // the bot's answers and Telegram's script go straight to the network
+  if (own && (req.mode === 'navigate' || /\/(index\.html)?$/.test(url.pathname))) { // the page: fresh when online, saved when not
+    e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(V).then(x => x.put('./index.html', c)); return r; }).catch(() => caches.match('./index.html')));
+    return;
+  }
+  const store = pic || /\/(posters|covers|fonts2?|emoji)\//.test(url.pathname) ? MEDIA : V;
+  // files with a fingerprint in their name, fonts, emoji and pictures never change: saved once, then instant
+  e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => { if (r.ok || r.type === 'opaque') { const c = r.clone(); caches.open(store).then(x => x.put(req, c)); } return r; })));
+});
